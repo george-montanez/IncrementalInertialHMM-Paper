@@ -1,0 +1,228 @@
+%%%% ijcai15.tex
+
+\typeout{Incremental Inertial HMMs}
+
+% These are the instructions for authors for IJCAI-15.
+% They are the same as the ones for IJCAI-11 with superficical wording
+%   changes only.
+
+\documentclass{article}
+% The file ijcai15.sty is the style file for IJCAI-15 (same as ijcai07.sty).
+\usepackage{ijcai15}
+\usepackage{url,graphicx,tabularx,array,amsmath,amssymb,amsthm,dsfont,textcomp}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+
+
+% Use the postscript times font!
+\usepackage{times}
+
+% the following package is optional:
+%\usepackage{latexsym} 
+
+% Following comment is from ijcai97-submit.tex:
+% The preparation of these files was supported by Schlumberger Palo Alto
+% Research, AT\&T Bell Laboratories, and Morgan Kaufmann Publishers.
+% Shirley Jowell, of Morgan Kaufmann Publishers, and Peter F.
+% Patel-Schneider, of AT\&T Bell Laboratories collaborated on their
+% preparation.
+
+% These instructions can be modified and used in other conferences as long
+% as credit to the authors and supporting agencies is retained, this notice
+% is not changed, and further modification or reuse is not restricted.
+% Neither Shirley Jowell nor Peter F. Patel-Schneider can be listed as
+% contacts for providing assistance without their prior permission.
+
+% To use for other conferences, change references to files and the
+% conference appropriate and use other authors, contacts, publishers, and
+% organizations.
+% Also change the deadline and address for returning papers and the length and
+% page charge instructions.
+% Put where the files are available in the appropriate places.
+
+\title{Online Learning of Inertial Hidden Markov Models}
+
+%...............................................................................
+%                                   Authors
+%...............................................................................
+
+\author{George D. Monta\~nez \\
+Carnegie Mellon University\\
+Pittsburgh, PA USA\\
+\texttt{gmontane@cs.cmu.edu} \\
+\And
+Saeed Amizadeh\\
+Yahoo Labs\\
+Sunnyvale, CA USA\\
+\texttt{amizadeh@yahoo-inc.com}\\
+\And
+Nikolay Laptev\\
+Yahoo Labs\\
+Sunnyvale, CA USA\\
+\texttt{nlaptev@yahoo-inc.com}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Building on recent advances in probabilistic temporal regularization for hidden Markov models, we develop an online learning extension for the inertial HMM framework, allowing for scaling to arbitrarily large datasets. In addition, we develop a robust delayed online prediction method, controlling for the trade-off between optimal and timely state prediction. Our method is tested on synthetic and real-world datasets, showing the effectiveness of our learning and prediction algorithms.
+\end{abstract}
+
+\section{Introduction}
+
+\section{Problem Statement}
+
+\section{Inertial Hidden Markov Models}
+
+Monta\~nez \emph{et.\ al.}~\shortcite{montanez_aaai_2015} recently introduced the inertial HMM solution for learning temporally regularized hidden Markov models for segmentation and characterization of multivariate time series. The inertial HMM is a $K$-state hidden Markov model with a modified likelihood function that causes increased state persistence as a direct consequence of maximizing the likelihood function. Because of this, the inertial HMM allows for simple expectation maximization~\cite{dempster1977maximum} training of the model.
+
+\subsection{Likelihood Function Modifications}
+Inertial HMMs propose redefining the likelihood function in one of two ways. The first is by applying a modified self-transition Dirichlet prior to the state transition matrix, which is scaled in proportion to sequence length in order to maintain consistent strength of regularization. This is referred to as the \emph{MAP inertial HMM} by the authors. The second is to use pseudo-observations for temporal regularization, where the observations are added to the joint complete data likelihood through use of a set of binary indicator random variables. This second method is referred to as the \emph{inertial pseudo-observation HMM}. The two methods lead to distinct, yet related, mathematical forms for the likelihood function and both allow for learning via expectation maximization. Furthermore, the authors report both methods to have similar performance on the tested datasets. Therefore, we extend the conceptually simpler MAP inertial HMM. Since the inertial regularization methods rely on standard EM learning, one can naturally incorporate online EM learning techniques into such systems.
+
+\subsection{Update Equation}
+
+For the MAP inertial HMM, the scale-free update equation for the state transition matrix $A$ is defined as
+\begin{align}\label{eq:SCALE-FREE-MAP}
+  \setlength{\abovedisplayskip}{0pt}
+  \setlength{\belowdisplayskip}{0pt}
+    A_{jk} &= \frac{((T - 1)^{\zeta}-1){\mathds{1}(j = k)} + \sum_{t=2}^{T} \xi(z_{(t-1)j}, z_{tk})}   
+    {((T - 1)^{\zeta} - 1) + \sum_{i=1}^{K}\sum_{t=2}^{T} \xi(z_{(t-1)j}, z_{ti})},
+\end{align}
+where $\mathds{1}(\cdot)$ denotes the indicator function, $T$ the length of the time series and $\xi(z_{(t-1)j}, z_{tk})=\mathds{E}[z_{(t-1)j}z_{tk}]$. This modified update equation is what distinguishes the inertial HMM from a standard HMM, and thus requires derivation of a novel online update equation. We provide the required equations in the next section.
+
+\section{Online Learning of Inertial HMMs}
+
+We extend the work of Stenger \emph{et
+al.}~\shortcite{stenger2001} and Monta\~nez \emph{et
+al.}~\shortcite{montanez_aaai_2015} to provide an online learning algorithm for the
+regularized MAP inertial hidden Markov model, which allows scaling to arbitrarily large
+datasets. Theoretical justification for incremental online EM learning is given
+in~\cite{Neal:1999:VEA:308574.308679}.
+
+\subsection{Parameter Update Equations}
+
+Define 
+\[
+   D_{T,i} := ((T-1)^\zeta -1) + \sum_{t=2}^{T}\sum_{k=1}^{K} \xi(z_{(t-1)i}, z_{tk}).
+\]
+The recurrence for $D_{T,i}$ is then formulated as
+\begin{equation*}
+    D_{T,i} = D_{(T-1), i} + [(T-1)^\zeta - (T-2)^\zeta] + \sum_{k=1}^{K}
+    \xi(z_{(T-1)i}, z_{Tk})
+\end{equation*}
+where $T$ is the current time-step. Since $T$ is both the current and final time-step, we have $\beta(z_{T,k}) = 1$ for $k = 1, \ldots, K$, and thus
+\begin{align*}
+    \xi(\mathbf{z}_{t-1}, \mathbf{z}_{t}) 
+            &= P(\mathbf{z}_{t-1}, \mathbf{z}_{t} | \mathbf{X}) \\
+            &= \frac{\alpha(\mathbf{z}_{t-1})p(\mathbf{x}_t|\mathbf{z}_t; \phi)p(\mathbf{z}_{t}|\mathbf{z}_{(t-1)})\beta(\mathbf{z}_t)}{p(\mathbf{X})} \\
+            &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t; \phi_j)A_{ij}^{(T-1)}}{\sum_{k=1}^{K}\alpha(z_{tk})}
+\end{align*}
+where
+\begin{align*}
+    \alpha(z_{tj}) &= \left[\sum_{i=1}^{K} \alpha(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t; \phi_j).
+\end{align*}
+
+An efficient online update equation for the regularized transition matrix is then given by
+\begin{align*}
+    A_{ij}^{(T)} &= \frac{D_{(T-1), i}}{D_{T,i}}A_{ij}^{(T-1)}
+    + \frac{\xi(z_{(T-1)i}, z_{Tj})}{D_{T,i}} \\
+                 &+ \frac{\mathds{1}(i = j)[(T-1)^\zeta - (T-2)^\zeta]}{D_{T,i}}
+\end{align*}
+
+Given that $\beta(z_{T,k}) = 1$, we have 
+\[
+    \gamma(z_{tk}) = \frac{\alpha(z_{tk})}{\sum_{i=1}^{K}\alpha(z_{ti})}
+\]
+for the incremental update. The corresponding incremental update equations for a Gaussian emission model (as reported in~\cite{stenger2001}) are 
+\begin{align*}
+    \mathbf{\mu}_{j}^{(T)} &= \frac{\sum_{t=1}^{T-1}\gamma(z_{tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\mathbf{\mu}_{j}^{(T-1)} + \frac{\gamma(z_{Tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\mathbf{x}_T
+\end{align*}
+and
+\begin{align*}
+    \mathbf{S}_j^{(T)} &= \frac{\sum_{t=1}^{T-1}\gamma(z_{tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\mathbf{S}_j^{(T-1)} \\
+                       &+ \frac{\gamma(z_{Tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\left(\mathbf{x}_T - \mathbf{\mu}_j^{(T)}\right)\left(\mathbf{x}_T - \mathbf{\mu}_j^{(T)}\right)'
+\end{align*}
+where $(\cdot)'$ denotes the matrix transpose operation and $\mathbf{S}_j$ is the covariance matrix for state $j$.
+
+\subsection{Initialization}
+
+The process begins by batch-learning initial parameter estimates from a small
+portion of the time-series. These estimates are used for $\mathbf{A}^{(1)}$,
+$\mathbf{\mu}^{(1)}$, $\mathbf{S}^{(1)}$ and $\pi(\mathbf{z}_t)$. For the
+$\alpha$ values, we initialize $\alpha(z_{1j}) = \pi(z_{1j})p(\mathbf{x}_1;
+\phi_j)$ for each $j$. Using Equation~\ref{eq:SCALE-FREE-MAP} and the definition
+of $D_{T,i}$, we compute $D_{2,i} = \sum_{j=1}^{K} \xi(z_{1i}, z_{2j})$, and 
+$A_{ij}^{(2)} = \xi(z_{1i}, z_{2j})/D_{2,i}$.
+
+The estimates are then updated for each new observation, using the update equations given above. Algorithm~\ref{alg:incremental} outlines the order in which the various terms are computed.
+
+\begin{algorithm}
+\caption{Incremental Learning}
+\small
+\begin{algorithmic}[1]
+\State Batch learn initial parameter estimates.
+\State Compute $D_{2,i}$ and $A_{ij}^{(2)}$ for all $i,j$.
+\ForAll{$T > 2$}
+\State Compute $\alpha$ values for observation at time $T$.
+\State Compute $\xi(z_{(T-1)i},z_{Tj})$ values for all $i,j$.
+\State Compute $\gamma(z_{Tj})$ and $D_{T,i}$ values for all $i,j$.
+\State Update $A_{i,j}^{(T)}$ using incremental update rule.
+\State Update $\mathbf{\mu}_{j}^{(T)}$ and $\mathbf{S}_{j}^{(T)}$ using incremental update rules.
+\EndFor
+\end{algorithmic}
+\label{alg:incremental}
+\end{algorithm}
+
+\subsection{Robust Online Prediction}
+
+We now consider the problem of online prediction. If an observation at time $t$ (the current time step) is an outlier, we cannot know whether the model should remain in the same hidden state, treating the outlier as an anomaly, or transition to a new hidden state. To overcome this limitation, we propose delayed prediction of state labels using a sliding window of length $w$. As the window moves through the observation sequence, the Viterbi algorithm is performed on the section of data within the window and a prediction for the second observation is output. The first observation is used to represent all past history, via the Markov property, and the remainder of the window allows for ``future'' observations to affect ``past'' observations, via the backtracking maximization performed by the Viterbi algorithm. We can begin to output delayed state label predictions as soon as $w$ observations arrive.
+
+The length of the sliding window controls the trade-off between optimal state prediction (which occurs when $w$ equals the length of all future and past observations) and the need for timely predictions. This parameter can be set using cross-validation when labeled state data is available.
+
+\section{Experiments}\label{sec:Experiments}
+
+
+\subsection{Datasets}\label{sec:datasets}
+
+Our synthetic data is generated from a two-state three-dimensional hidden Markov model with transition matrix
+\begin{align*}
+  \setlength{\abovedisplayskip}{0pt}
+  \setlength{\belowdisplayskip}{0pt}
+    \mathbf{A} &= \left( 
+                   \begin{array}{ccc}
+                    0.9995 & 0.0005 \\
+                    0.0005 & 0.9995
+                   \end{array}
+                   \right),
+\end{align*}
+having equal start probabilities and emission parameters equal to $\mathbf{\mu}_1 = (-1, -1, -1)^\top$, $\mathbf{\mu}_2 = (1, 1, 1)^\top$, $\mathbf{\Sigma}_1 = \mathbf{\Sigma}_2 = \text{diag}(3)$. Using this model, we generated one hundred time series of length 100,000.
+
+The second dataset we constructed using real-world human accelerometer data~\cite{Altun:2010:CSC:1823245.1823314}, collected using Xsens MTx\texttrademark\ units attached to the torso, arms and legs of human volunteers, resulting in forty-five dimensional signals. The signals were recorded for volunteers performing five different activities, such as playing basketball, jumping, walking on a flat surface, rowing and ascending stairs. The signals consist of accelerometer, gyroscope and magnetometer data, which we consider as a single 45D multivariate time series. 
+
+From this human activity data we generated one hundred multivariate time series, with varying number of segments and varying activities, using a five-state HMM with 90\% probability of self-transition, 2.5\% probability of non-self-transition (equal for all states), equal start probability and emissions generated by using the actual sensor data in serial fashion for the five activities, modulo the length of the stream. One hundred time series of 100,000 time ticks were generated in this manner.
+
+\subsection{Experimental Methodology}
+
+\subsection{Results}
+
+\section{Discussion}
+
+\section{Related Work}
+
+\section{Conclusions}
+
+
+\section*{Acknowledgments}
+GDM is supported by the National Science Foundation Graduate Research Fellowship under Grant No.\ 1252522. 
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors alone and do not necessarily
+reflect the views of the National Science Foundation or any other organization.
+%\vspace{0.5cm}
+%\fontsize{9.5pt}{10.5pt}
+%\selectfont
+%% The file named.bst is a bibliography style file for BibTeX 0.99c
+\bibliographystyle{named}
+\bibliography{references}
+
+\end{document}
+
