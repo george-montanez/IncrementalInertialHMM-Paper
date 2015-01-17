@@ -3,3 +3,5 @@
 *.bbl
 *.blg
 *.log
+/incremental_inertial_hmm.pdf
+/incremental_inertial_hmm.synctex.gz

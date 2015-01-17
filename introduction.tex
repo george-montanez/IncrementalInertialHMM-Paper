@@ -1,0 +1,82 @@
+\section{Introduction}
+
+Processing temporal information, aka time-series, is a crucial aspect of many
+AI systems. The main distinction between temopral data and static data is, 
+in almost all time-series data, \emph{change of value} from one time point to
+another is inevitable. There are two main sources that cause these changes. The
+first category of changes are the result of the normal progression of
+time-series behavior plus some level of uncertainty (or noise) over time, and
+therefore, are \emph{expected}.
+This type of changes are typically modeled via dynamical equations and/or dynamic
+graphical models. The second type of changes, however, are unexpected due to the
+occurance of some (external) events, and are typically referred to as
+\emph{anomalies}. Depending on how fundamental the impact of an anomaly is, it
+can be either volatile or persistent, which are respectively referred to as
+\emph{outliers} and \emph{change points} in the literature. There
+is an extensive volume of work in the literature to detect both outliers
+~\cite{tsay1988outliers,chandola2009anomaly,galeano2006outlier} and change
+points ~\cite{kawahara2007change,xie2013change,liu2013change,ray2002bayesian}.
+
+As opposed to outliers, change points attribute to more profound and systematic
+changes in the underlying behavior of the data over time. Properly
+charectarizing this type of anomalies significantly affects the way that AI
+systems understand and interpret the data. As a result, in this paper, we focus
+on modeling this type of changes. By modeling persistent changes, we do not
+mean only detecting them but also recognizing the new behavior of the
+time-series after the change. From this perspective, the desired solution will
+be different from typical change point detection techniques. More
+precisely, we also want to recognize the \emph{state} of behavior the
+data-generating system is operating in after change, which in general is not
+observed.
+To this end, a standard approach in Machine Learning is to incorporate latent space
+models such as Hidden Markov Models (HMM) and Dynamical Systems (DS). While
+these methods work well for many similar problems, they can result in high rate of
+false positives when it comes to detecting the persistent changes in
+time-series. The reason behind this observation is that a true transition
+between two states of behavior does not happen very frequently over time; in
+other words, after changing to a new state, the system tends to stay in that
+state for a while. Following \cite{montanez_aaai_2015}, we refer to this
+property as the \emph{inertial property}.
+The general HMM and DS are not well-equipped to capture this property, however.
+
+To account for the inertial property in the input time-series, the
+straightforward approach is to directly encode this property into the model. To
+this end, Fox \emph{et.\ al.} ~\cite{fox2011sticky} have proposed incorporating
+a non-parametric Bayes method to add \emph{stickyness} to HMMs. The resulting
+method is called the \emph{Hierarchical Dirichlet Process} HMM (HDP-HMM).
+Despite the nice theoretical formulation of HDP-HMM, in practice, HDP-HMM cannot
+properly handle time-series with dimension more than 10. This is because, due
+to the existence of many hyperparameters, the search for the best
+initialization of the model is exponentially expensive. More recently,
+Monta\~nez \emph{et.\ al.}~\shortcite{montanez_aaai_2015} have proposed
+\emph{Inertial} HMM, which is much simpler yet way more effective in practice.
+Compared to HDP-HMM, Inertial HMM has only one tuning parameter and can handle moderate
+dimensional data; furthermore, learning for Inertial HMM is much faster in
+terms of time complexity. All of these makes Inertial HMM a practical solution
+for many real-world time-series change modeling problems.
+
+Despite the nice theoretical and practical properties of HDP-HMM and Inertial
+HMM, both methods are batch frameworks, meaning that both learning and inference
+are done offline on batch time-series data. However, in many applications, the
+temporal information is consumed by the AI system in the streaming fashion. For
+instance, never-ending learning systems are required to learn from an act upon
+every single piece of information that is streamed into the system in real-time.
+In such scenarios, batch processing of the data is either infeasible or
+inefficient at best. Moreover, even for batch problems, depending on the
+computational resources, the memory and CPU requirements can be prohibitive to
+process large-scale time-series data at once. In these cases, streaming the
+batch data into the system is one way of addressing the scalability problem.
+
+As a result, in this paper, we propose an online framework based on the Inertial
+HMM to address the problem of change modeling in multi-variate streaming
+time-series. In particular, we propose (A) an online learning algorithm for
+Inertial HMM and (B) a robust inference algorithm for online detection of change
+points (i.e. the state transitions). The former provides the 
+Inertial HMM with the ability to constantly update itself as it consumes the
+streaming data, while the latter is crucial in the sense that
+robust recognition of outliers vs. change-points in real-time is key to
+keeping the rate of false positives low. To evaluate our proposed framework, we
+have applied it to large-scale time-series which are fed to the model in the
+streaming fashion. The experimental results show the merits of the proposed
+methodology in terms of both accuracy and efficiency.
+
