@@ -116,11 +116,11 @@ where $T$ is the current time-step. Since $T$ is both the current and final time
     \xi(\mathbf{z}_{t-1}, \mathbf{z}_{t}) 
             &= P(\mathbf{z}_{t-1}, \mathbf{z}_{t} | \mathbf{X}) \\
             &= \frac{\alpha(\mathbf{z}_{t-1})p(\mathbf{x}_t|\mathbf{z}_t; \phi)p(\mathbf{z}_{t}|\mathbf{z}_{(t-1)})\beta(\mathbf{z}_t)}{p(\mathbf{X})} \\
-            &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t; \phi_j)A_{ij}^{(T-1)}}{\sum_{k=1}^{K}\alpha(z_{tk})}
+            &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t; z_{tj}, \phi)A_{ij}^{(T-1)}}{\sum_{k=1}^{K}\alpha(z_{tk})}
 \end{align*}
 where
 \begin{align*}
-    \alpha(z_{tj}) &= \left[\sum_{i=1}^{K} \alpha(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t; \phi_j).
+    \alpha(z_{tj}) &= \left[\sum_{i=1}^{K} \alpha(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t; z_{tj},\phi).
 \end{align*}
 
 An efficient online update equation for the regularized transition matrix is then given by
@@ -150,8 +150,8 @@ where $(\cdot)'$ denotes the matrix transpose operation and $\mathbf{S}_j$ is th
 The process begins by batch-learning initial parameter estimates from a small
 portion of the time-series. These estimates are used for $\mathbf{A}^{(1)}$,
 $\mathbf{\mu}^{(1)}$, $\mathbf{S}^{(1)}$ and $\pi(\mathbf{z}_t)$. For the
-$\alpha$ values, we initialize $\alpha(z_{1j}) = \pi(z_{1j})p(\mathbf{x}_1;
-\phi_j)$ for each $j$. Using Equation~\ref{eq:SCALE-FREE-MAP} and the definition
+$\alpha$ values, we initialize $\alpha(z_{1j}) = \pi(z_{1j})p(\mathbf{x}_1;z_{1j}, 
+\phi)$ for each $j$. Using Equation~\ref{eq:SCALE-FREE-MAP} and the definition
 of $D_{T,i}$, we compute $D_{2,i} = \sum_{j=1}^{K} \xi(z_{1i}, z_{2j})$, and 
 $A_{ij}^{(2)} = \xi(z_{1i}, z_{2j})/D_{2,i}$.
 
