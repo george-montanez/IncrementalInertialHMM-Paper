@@ -73,9 +73,15 @@ Building on recent advances in probabilistic temporal regularization for hidden 
 
 \section{Problem Statement}
 
+Here is where we must state the problem we are trying to solve.
+
 \section{Inertial Hidden Markov Models}
 
 Monta\~nez \emph{et.\ al.}~\shortcite{montanez_aaai_2015} recently introduced the inertial HMM solution for learning temporally regularized hidden Markov models for segmentation and characterization of multivariate time series. The inertial HMM is a $K$-state hidden Markov model with a modified likelihood function that causes increased state persistence as a direct consequence of maximizing the likelihood function. Because of this, the inertial HMM allows for simple expectation maximization~\cite{dempster1977maximum} training of the model.
+
+\subsection{Notation and Preliminaries}
+
+Here I will define $\alpha$, $\beta$, $\xi$, $\gamma$, the 1-of-$K$ notation for $\mathbf{z}_t$ and  other things necessary to understand the next section.
 
 \subsection{Likelihood Function Modifications}
 Inertial HMMs propose redefining the likelihood function in one of two ways. The first is by applying a modified self-transition Dirichlet prior to the state transition matrix, which is scaled in proportion to sequence length in order to maintain consistent strength of regularization. This is referred to as the \emph{MAP inertial HMM} by the authors. The second is to use pseudo-observations for temporal regularization, where the observations are added to the joint complete data likelihood through use of a set of binary indicator random variables. This second method is referred to as the \emph{inertial pseudo-observation HMM}. The two methods lead to distinct, yet related, mathematical forms for the likelihood function and both allow for learning via expectation maximization. Furthermore, the authors report both methods to have similar performance on the tested datasets. Therefore, we extend the conceptually simpler MAP inertial HMM. Since the inertial regularization methods rely on standard EM learning, one can naturally incorporate online EM learning techniques into such systems.
@@ -112,18 +118,18 @@ The recurrence for $D_{T,i}$ is then formulated as
     \xi(z_{(T-1)i}, z_{Tk})
 \end{equation*}
 where $T$ is the current time-step. Since $T$ is both the current and final time-step, we have $\beta(z_{T,k}) = 1$ for $k = 1, \ldots, K$, and thus
-\begin{align*}
+\begin{align}
     \xi(\mathbf{z}_{t-1}, \mathbf{z}_{t}) 
-            &= P(\mathbf{z}_{t-1}, \mathbf{z}_{t} | \mathbf{X}) \\
-            &= \frac{\alpha(\mathbf{z}_{t-1})p(\mathbf{x}_t|\mathbf{z}_t; \phi)p(\mathbf{z}_{t}|\mathbf{z}_{(t-1)})\beta(\mathbf{z}_t)}{p(\mathbf{X})} \\
-            &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t; z_{tj}, \phi)A_{ij}^{(t-1)}}{\sum_{k=1}^{K}\alpha(z_{tk})}
-\end{align*}
+            &= P(\mathbf{z}_{t-1}, \mathbf{z}_{t} | \mathbf{X}) \notag{}\\
+            &= \frac{\alpha(\mathbf{z}_{t-1})p(\mathbf{x}_t|\mathbf{z}_t; \phi)p(\mathbf{z}_{t}|\mathbf{z}_{(t-1)})\beta(\mathbf{z}_t)}{p(\mathbf{X})} \notag{}\\
+            &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t| z_{tj}; \phi)A_{ij}^{(t-1)}}{p(\mathbf{X})}
+\end{align}
 where
-\begin{align*}
-    \alpha(z_{tj}) &= \left[\sum_{i=1}^{K} \alpha(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t; z_{tj},\phi).
-\end{align*}
+\begin{align}\label{eq:alpha-recursion}
+    \alpha(z_{tj}) &= \left[\sum_{i=1}^{K} \alpha(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t| z_{tj}; \phi).
+\end{align}
 
-An efficient online update equation for the regularized transition matrix is then given by
+The online update equation for the regularized transition matrix is then given by
 \begin{align*}
     A_{ij}^{(T)} &= \frac{D_{(T-1), i}}{D_{T,i}}A_{ij}^{(T-1)}
     + \frac{\xi(z_{(T-1)i}, z_{Tj})}{D_{T,i}} \\
@@ -131,9 +137,9 @@ An efficient online update equation for the regularized transition matrix is the
 \end{align*}
 
 Given that $\beta(z_{T,k}) = 1$, we have 
-\[
-    \gamma(z_{tk}) = \frac{\alpha(z_{tk})}{\sum_{i=1}^{K}\alpha(z_{ti})}
-\]
+\begin{align}\label{eq:gamma}
+    \gamma(z_{tk}) &= \frac{\alpha(z_{tk})}{p(\mathbf{X})}
+\end{align}
 for the incremental update. The corresponding incremental update equations for a Gaussian emission model (as reported in~\cite{stenger2001}) are 
 \begin{align*}
     \mathbf{\mu}_{j}^{(T)} &= \frac{\sum_{t=1}^{T-1}\gamma(z_{tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\mathbf{\mu}_{j}^{(T-1)} + \frac{\gamma(z_{Tj})}{\sum_{t=1}^{T}\gamma(z_{tj})}\mathbf{x}_T
@@ -145,15 +151,59 @@ and
 \end{align*}
 where $(\cdot)'$ denotes the matrix transpose operation and $\mathbf{S}_j$ is the covariance matrix for state $j$.
 
+\subsection{Scaling Factors}
+
+For the recursive update process, we see that the $\alpha(\cdot)$ values computed in Equation (\ref{eq:alpha-recursion}) will rapidly decrease towards zero and cause underflow issues, since at each step the previously computed value is multiplied by two small quantities. Since the same issue arises in standard hidden Markov models, we also make use of the same solution: we replace the $\alpha(\cdot)$ values with rescaled versions that remain at the order of unity for each step~\cite{bishop2007patternB}.
+
+We define a rescaled function, $\hat{\alpha}(\cdot)$, as
+\begin{align}
+    \hat{\alpha}(z_{ti}) &= p(z_{ti} | \mathbf{x}_1,\ldots,\mathbf{x}_t) \notag{}\\
+            &= \frac{p(\mathbf{x}_1,\ldots,\mathbf{x}_t, z_{ti})}{p(\mathbf{x}_1,\ldots,\mathbf{x}_t)} \notag{}\\
+            &= \frac{\alpha(z_{ti})}{p(\mathbf{x}_1,\ldots,\mathbf{x}_t)}.
+\end{align}
+As defined, $\hat{\alpha}(\cdot)$ is a probability distribution over $K$ states, and will thus remain well-behaved at each time step. If we further define $c_{t} := p(\mathbf{x}_t|\mathbf{x}_1, \ldots, \mathbf{x}_{t-1})$, by the chain rule we have
+\begin{align*}
+    p(\mathbf{x}_1, \ldots, \mathbf{x}_{t}) &= \prod_{m=1}^{t}c_m
+\end{align*}
+and
+\begin{align}\label{eq:alpha-equality}
+    \alpha(z_{ti}) &= \left(\prod_{m=1}^{t}c_m\right)\hat{\alpha}(z_{ti}).
+\end{align}
+From Equations (\ref{eq:alpha-equality}) and (\ref{eq:alpha-recursion}), we obtain the following recurrence for $\hat{\alpha}(\cdot)$:
+\begin{align}
+    \hat{\alpha}(z_{tj}) &= \frac{1}{c_t}\left[\sum_{i=1}^{K} \hat{\alpha}(z_{(t-1)i})A_{ij}^{(t-1)}\right]p(\mathbf{x}_t| z_{tj}; \phi) \notag{}\\
+                         &= \frac{1}{c_t}R_j(\mathbf{x}_t),
+\end{align}
+where $c_t = p(\mathbf{x}_t|\mathbf{x}_1, \ldots, \mathbf{x}_{t-1}) = \sum_{j=1}^{K}R_j(\mathbf{x}_t)$, and thus can be seen as a normalization constant.
+
+We further derive expressions for the $\gamma$ and $\xi$ in terms of $\hat{\alpha}(\cdot)$, as
+\begin{align}
+    \gamma(z_{tk}) &= \frac{\alpha(z_{tk})}{p(\mathbf{X})} \notag{}\\
+                   &= \frac{\left(\prod^{t}_{m=1} c_m\right)}{\left(\prod^{T}_{m=1} c_m\right)}\hat{\alpha}(z_{tk}) \notag{}\\
+                   &= \frac{\hat{\alpha}(z_{tk})}{\left(\prod^{T}_{m=t+1} c_m\right)},
+\end{align}
+and
+\begin{align}
+    \xi(\mathbf{z}_{t-1}, \mathbf{z}_{t})
+                   &= \frac{\alpha(z_{(t-1)i})p(\mathbf{x}_t| z_{tj}; \phi)A_{ij}^{(t-1)}}{p(\mathbf{X})} \notag{}\\
+                   &= \frac{\left(\prod^{t-1}_{m=1} c_m\right)}{\left(\prod^{T}_{m=1} c_m\right)}\hat{\alpha}(z_{(t-1)i})p(\mathbf{x}_t| z_{tj}; \phi)A_{ij}^{(t-1)} \notag{}\\                   
+                   &= \frac{\hat{\alpha}(z_{(t-1)i})p(\mathbf{x}_t| z_{tj}; \phi)A_{ij}^{(t-1)}}{\left(\prod^{T}_{m=t} c_m\right)}.
+\end{align}
+Because $t$ is always both the current and final time step, we have $t=T$ and these simplify to
+\begin{align}
+    \gamma(z_{tk}) &= \hat{\alpha}(z_{tk}), \\
+    \xi(\mathbf{z}_{t-1}, \mathbf{z}_{t}) &= \frac{1}{c_t}\left[\hat{\alpha}(z_{(t-1)i})p(\mathbf{x}_t| z_{tj}; \phi)A_{ij}^{(t-1)}\right]. 
+\end{align}
+
 \subsection{Initialization}
 
 The process begins by batch-learning initial parameter estimates from a small
 portion of the time-series. These estimates are used for $\mathbf{A}^{(1)}$,
 $\mathbf{\mu}^{(1)}$, $\mathbf{S}^{(1)}$ and $\pi(\mathbf{z}_t)$. For the
-$\alpha$ values, we initialize $\alpha(z_{1j}) = \pi(z_{1j})p(\mathbf{x}_1;z_{1j}, 
-\phi)$ for each $j$. Using Equation~\ref{eq:SCALE-FREE-MAP} and the definition
-of $D_{T,i}$, we compute $D_{2,i} = \sum_{j=1}^{K} \xi(z_{1i}, z_{2j})$, and 
-$A_{ij}^{(2)} = \xi(z_{1i}, z_{2j})/D_{2,i}$. 
+$\alpha$ values, we initialize $\hat{\alpha}(z_{1j}) = (1/c_1)\pi(z_{1j})p(\mathbf{x}_1| z_{1j}; \phi)$
+for each $j$, where $c_1$ is again the value that normalizes $\hat{\alpha}(\mathbf{z}_{1})$. 
+Using Equation~\ref{eq:SCALE-FREE-MAP} and the definition of $D_{T,i}$, we compute 
+$D_{2,i} = \sum_{j=1}^{K} \xi(z_{1i}, z_{2j})$, and $A_{ij}^{(2)} = \xi(z_{1i}, z_{2j})/D_{2,i}$. 
 
 The estimates are then updated for each new observation, using the update equations given above. Algorithm~\ref{alg:incremental} outlines the order in which the various terms are computed.
 
